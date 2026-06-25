@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>螢光筆筆記</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #FAFAF8;
+    --surface: #FFFFFF;
+    --border: rgba(0,0,0,0.1);
+    --border-md: rgba(0,0,0,0.18);
+    --text: #1A1A18;
+    --text-secondary: #6B6B67;
+    --text-tertiary: #A8A8A4;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #18181A;
+      --surface: #232326;
+      --border: rgba(255,255,255,0.1);
+      --border-md: rgba(255,255,255,0.18);
+      --text: #F0F0EC;
+      --text-secondary: #A0A09C;
+      --text-tertiary: #606060;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 18px 24px 16px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: #FFE066;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+
+  .divider-v {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: rgba(0,0,0,0.05); }
+  @media (prefers-color-scheme: dark) { .btn:hover { background: rgba(255,255,255,0.07); } }
+
+  .btn.active {
+    background: rgba(0,0,0,0.07);
+    border-color: var(--border-md);
+  }
+  @media (prefers-color-scheme: dark) { .btn.active { background: rgba(255,255,255,0.1); } }
+
+  .btn-export {
+    background: #1A1A18;
+    color: #F0F0EC;
+    border-color: #1A1A18;
+  }
+  .btn-export:hover { background: #333; }
+  @media (prefers-color-scheme: dark) {
+    .btn-export { background: #F0F0EC; color: #1A1A18; border-color: #F0F0EC; }
+    .btn-export:hover { background: #D8D8D4; }
+  }
+
+  .color-palette {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .color-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.12s, border-color 0.12s;
+    outline: none;
+  }
+  .color-btn:hover { transform: scale(1.15); }
+  .color-btn.active { border-color: var(--text); }
+  .color-btn:focus-visible { box-shadow: 0 0 0 3px rgba(0,0,0,0.2); }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .pane {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .pane-left { border-right: 0.5px solid var(--border); }
+
+  .pane-header {
+    padding: 14px 20px 12px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+  }
+
+  .pane-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .pane-count {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-left: auto;
+  }
+
+  #editor {
+    flex: 1;
+    padding: 24px 28px;
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+    outline: none;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--bg);
+    min-height: 0;
+  }
+
+  #editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  .highlights-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--bg);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 10px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    text-align: center;
+    padding: 2rem;
+    line-height: 1.6;
+  }
+
+  .empty-icon {
+    font-size: 36px;
+    opacity: 0.4;
+  }
+
+  .hi-item {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text);
+    border: 0.5px solid transparent;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .hi-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  mark {
+    border-radius: 3px;
+    padding: 1px 2px;
+    cursor: pointer;
+    transition: opacity 0.1s;
+  }
+  mark:hover { opacity: 0.75; }
+
+  .mode-label {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255,90,90,0.12);
+    color: #C0392B;
+    font-weight: 500;
+    display: none;
+  }
+  .mode-label.visible { display: inline-block; }
+
+  footer {
+    padding: 10px 24px;
+    border-top: 0.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+
+  footer .clear-link {
+    color: var(--text-tertiary);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    background: none;
+    border: none;
+    font: inherit;
+    font-size: 12px;
+    padding: 0;
+  }
+  footer .clear-link:hover { color: var(--text-secondary); }
+
+  @media (max-width: 700px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 1fr 300px; }
+    .pane-left { border-right: none; border-bottom: 0.5px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">✍️</div>
+    <span class="logo-text">螢光筆筆記</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="color-palette" id="color-palette">
+      <button class="color-btn active" data-color="yellow" style="background:#FFE066" onclick="setColor('yellow','#FFE066','#7A6000',this)" title="黃色" aria-label="黃色螢光筆"></button>
+      <button class="color-btn" data-color="green" style="background:#A8E6B0" onclick="setColor('green','#A8E6B0','#1A5C28',this)" title="綠色" aria-label="綠色螢光筆"></button>
+      <button class="color-btn" data-color="blue" style="background:#9BD4F5" onclick="setColor('blue','#9BD4F5','#0A4A6E',this)" title="藍色" aria-label="藍色螢光筆"></button>
+      <button class="color-btn" data-color="pink" style="background:#F9B8D0" onclick="setColor('pink','#F9B8D0','#7A1B40',this)" title="粉紅" aria-label="粉紅螢光筆"></button>
+      <button class="color-btn" data-color="orange" style="background:#FFCB82" onclick="setColor('orange','#FFCB82','#7A4200',this)" title="橘色" aria-label="橘色螢光筆"></button>
+    </div>
+
+    <div class="divider-v"></div>
+
+    <button class="btn active" id="btn-mark" onclick="setMode('highlight')" aria-pressed="true">
+      🖊 標記
+    </button>
+    <button class="btn" id="btn-erase" onclick="setMode('erase')" aria-pressed="false">
+      ✕ 清除
+    </button>
+    <span class="mode-label" id="erase-label">清除模式</span>
+
+    <div class="divider-v"></div>
+
+    <button class="btn btn-export" onclick="exportTxt()">
+      ↓ 匯出 .txt
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="pane pane-left">
+    <div class="pane-header">
+      <span class="pane-label">筆記內容</span>
+      <span style="font-size:12px;color:var(--text-tertiary);margin-left:auto;">選取文字 → 點擊顏色標記</span>
+    </div>
+    <div id="editor" contenteditable="true"
+         data-placeholder="在此貼上或輸入文字，接著選取想標記的文字，再點選上方顏色或「標記」按鈕，即可新增螢光筆標記。"
+         spellcheck="false"
+         role="textbox"
+         aria-multiline="true"
+         aria-label="筆記編輯區"></div>
+  </div>
+
+  <div class="pane pane-right">
+    <div class="pane-header">
+      <span class="pane-label">重點彙整</span>
+      <span class="pane-count" id="count-badge">0 條</span>
+    </div>
+    <div class="highlights-scroll" id="highlights-list" aria-live="polite" aria-label="螢光筆標記清單">
+      <div class="empty-state">
+        <span class="empty-icon">🔖</span>
+        選取文字並按下標記<br>重點會自動彙整到這裡
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span id="footer-count">尚未標記任何文字</span>
+  <button class="clear-link" onclick="clearHighlights()">清除所有標記</button>
+</footer>
+
+<script>
+let mode = 'highlight';
+let currentColor = 'yellow';
+let currentHex = '#FFE066';
+let currentText = '#7A6000';
+let highlights = [];
+
+const colorInfo = {
+  yellow: { hex:'#FFE066', text:'#7A6000', label:'黃色', bg:'#FFF8CC' },
+  green:  { hex:'#A8E6B0', text:'#1A5C28', label:'綠色', bg:'#E8F8EB' },
+  blue:   { hex:'#9BD4F5', text:'#0A4A6E', label:'藍色', bg:'#E5F4FD' },
+  pink:   { hex:'#F9B8D0', text:'#7A1B40', label:'粉紅', bg:'#FDE8F1' },
+  orange: { hex:'#FFCB82', text:'#7A4200', label:'橘色', bg:'#FFF0D8' },
+};
+
+function setMode(m) {
+  mode = m;
+  const isHL = m === 'highlight';
+  document.getElementById('btn-mark').classList.toggle('active', isHL);
+  document.getElementById('btn-erase').classList.toggle('active', !isHL);
+  document.getElementById('btn-mark').setAttribute('aria-pressed', isHL);
+  document.getElementById('btn-erase').setAttribute('aria-pressed', !isHL);
+  document.getElementById('erase-label').classList.toggle('visible', !isHL);
+  document.getElementById('color-palette').style.opacity = isHL ? '1' : '0.35';
+  document.getElementById('editor').style.cursor = isHL ? 'text' : 'crosshair';
+}
+
+function setColor(name, hex, textCol, btn) {
+  currentColor = name;
+  currentHex = hex;
+  currentText = textCol;
+  document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (mode !== 'highlight') setMode('highlight');
+}
+
+document.getElementById('editor').addEventListener('mouseup', handleSelection);
+document.getElementById('editor').addEventListener('touchend', () => setTimeout(handleSelection, 50));
+
+function handleSelection() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const text = sel.toString().trim();
+  if (!text) return;
+
+  if (mode === 'erase') {
+    eraseMarksInRange(range);
+    sel.removeAllRanges();
+    syncHighlights();
+    return;
+  }
+
+  const mark = document.createElement('mark');
+  const id = 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  mark.dataset.id = id;
+  mark.dataset.color = currentColor;
+  mark.style.background = currentHex;
+  mark.style.color = currentText;
+  mark.title = '點擊移除此標記';
+  mark.setAttribute('role', 'mark');
+  mark.onclick = function(e) { e.stopPropagation(); removeMarkEl(this); };
+
+  try {
+    range.surroundContents(mark);
+  } catch(e) {
+    const frag = range.extractContents();
+    mark.appendChild(frag);
+    range.insertNode(mark);
+  }
+  sel.removeAllRanges();
+  highlights.push({ id, text, color: currentColor });
+  renderHighlights();
+}
+
+function eraseMarksInRange(range) {
+  document.getElementById('editor').querySelectorAll('mark').forEach(m => {
+    if (range.intersectsNode(m)) unwrapMark(m);
+  });
+}
+
+function unwrapMark(m) {
+  const p = m.parentNode;
+  while (m.firstChild) p.insertBefore(m.firstChild, m);
+  p.removeChild(m);
+}
+
+function removeMarkEl(markEl) {
+  const id = markEl.dataset.id;
+  unwrapMark(markEl);
+  highlights = highlights.filter(h => h.id !== id);
+  renderHighlights();
+}
+
+function syncHighlights() {
+  const ids = new Set([...document.getElementById('editor').querySelectorAll('mark')].map(m => m.dataset.id));
+  highlights = highlights.filter(h => ids.has(h.id));
+  renderHighlights();
+}
+
+function clearHighlights() {
+  document.getElementById('editor').querySelectorAll('mark').forEach(m => unwrapMark(m));
+  highlights = [];
+  renderHighlights();
+}
+
+function renderHighlights() {
+  const list = document.getElementById('highlights-list');
+  const badge = document.getElementById('count-badge');
+  const footer = document.getElementById('footer-count');
+  const n = highlights.length;
+  badge.textContent = n + ' 條';
+  footer.textContent = n === 0 ? '尚未標記任何文字' : '共 ' + n + ' 條標記';
+
+  if (n === 0) {
+    list.innerHTML = '<div class="empty-state"><span class="empty-icon">🔖</span>選取文字並按下標記<br>重點會自動彙整到這裡</div>';
+    return;
+  }
+
+  list.innerHTML = highlights.map(h => {
+    const c = colorInfo[h.color];
+    return `<div class="hi-item" style="background:${c.bg};border-color:${c.hex}88;">
+      <span class="hi-dot" style="background:${c.hex};"></span>
+      <span>${escHtml(h.text)}</span>
+    </div>`;
+  }).join('');
+}
+
+function exportTxt() {
+  if (highlights.length === 0) { alert('還沒有任何螢光筆標記喔！請先選取文字並標記。'); return; }
+  const groups = {};
+  highlights.forEach(h => {
+    const label = colorInfo[h.color].label;
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(h.text);
+  });
+  let out = '螢光筆筆記 — 重點彙整\n';
+  out += '匯出時間：' + new Date().toLocaleString('zh-TW') + '\n';
+  out += '共 ' + highlights.length + ' 條標記\n';
+  out += '═'.repeat(36) + '\n\n';
+  Object.entries(groups).forEach(([label, items]) => {
+    out += '【' + label + '】\n';
+    items.forEach((t, i) => { out += (i + 1) + '. ' + t + '\n'; });
+    out += '\n';
+  });
+  const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '螢光筆筆記_' + new Date().toISOString().slice(0, 10) + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
